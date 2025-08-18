@@ -49,6 +49,8 @@ B2**, and stores metadata in a external db for easy retrieval.
 
 ## ⚙️ Running locally
 
+> Firstly, make sure that you are running node v20 or higher.
+
 ```bash
 # Clone the repo
 git clone https://github.com/Vitu2002/ym-images-processor.git
@@ -97,6 +99,7 @@ yarn start:dev
 | `B2_KEY`           | Backblaze B2 key ID             |
 | `B2_SECRET`        | Backblaze B2 application key    |
 | `B2_BUCKET`        | Backblaze B2 target bucket name |
+| `CHUNK_SIZE`       | AMount of images by chunk procs |
 
 ---
 

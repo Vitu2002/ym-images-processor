@@ -10,6 +10,7 @@ declare namespace NodeJS {
         B2_SECRET: string; // secret key
         REDIS_URI: string; // redis://localhost:6379
         DATABASE_URL: string; // postgres://user:password@localhost:5432
+        CHUNK_SIZE: number; // max number of objects to fetch at once
         API_SECRET: string; // api secret to auth delete request
     }
 }
