@@ -12,5 +12,6 @@ declare namespace NodeJS {
         DATABASE_URL: string; // postgres://user:password@localhost:5432
         CHUNK_SIZE: number; // max number of objects to fetch at once
         API_SECRET: string; // api secret to auth delete request
+        CONCURRENCY: number; // number of concurrent image processing jobs
     }
 }
