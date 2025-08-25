@@ -1,3 +1,4 @@
+import { Process } from '@nestjs/bull';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,8 +20,10 @@ export class ImageProcessor extends WorkerHost {
         private readonly b2: B2Service
     ) {
         super();
+        this.logger.log(`Image processor started with concurrency ${process.env.CONCURRENCY || 1}`);
     }
 
+    @Process({ concurrency: parseInt(`${process.env.CONCURRENCY || '1'}`) || 1 })
     async process(job: Job<{ objKey: string }>) {
         const { objKey } = job.data;
         this.logger.log(`Converting ${objKey}`);

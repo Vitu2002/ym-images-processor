@@ -12,7 +12,12 @@ import { ImageService } from './image.service';
 
 @Module({
     imports: [
-        BullModule.registerQueue({ name: 'image-convert' }),
+        BullModule.registerQueue({
+            name: 'image-convert',
+            defaultJobOptions: {
+                attempts: 3
+            }
+        }),
         TypeOrmModule.forFeature([ProcessedImage]),
         MinioModule,
         B2Module

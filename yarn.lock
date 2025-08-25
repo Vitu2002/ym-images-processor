@@ -1090,6 +1090,14 @@
   dependencies:
     tslib "2.8.1"
 
+"@nestjs/bull@^11.0.3":
+  version "11.0.3"
+  resolved "https://registry.yarnpkg.com/@nestjs/bull/-/bull-11.0.3.tgz#11e506508deb117fff8cfb132ac22e4c47d02521"
+  integrity sha512-VyH823Klc7OgsU0FyuKItgRefgrQOQHN5uW9lHxNih6LRtw2Vpi9fENjPdOwjQqKexxZxjNDGKZoDCyK+UGclg==
+  dependencies:
+    "@nestjs/bull-shared" "^11.0.3"
+    tslib "2.8.1"
+
 "@nestjs/bullmq@^11.0.3":
   version "11.0.3"
   resolved "https://registry.yarnpkg.com/@nestjs/bullmq/-/bullmq-11.0.3.tgz#c817d84cc4397fb4f920d1cefe44c8c0e1701fbc"
