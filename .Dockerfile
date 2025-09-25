@@ -20,8 +20,5 @@ RUN bun run build
 # Expose port
 EXPOSE 3000
 
-# Set NODE_ENV to production
-ENV NODE_ENV=production
-
 # Run app
 CMD ["bun", "start:prod"]
