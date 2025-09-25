@@ -81,6 +81,8 @@ export class MinioService extends Client implements OnModuleInit {
 
     async deleteImage(objectName: string) {
         this.logger.log(`Deleting ${objectName}`);
-        await this.removeObject(this.BUCKET_NAME, objectName);
+        await this.removeObject(this.BUCKET_NAME, objectName, {
+            forceDelete: true
+        });
     }
 }
