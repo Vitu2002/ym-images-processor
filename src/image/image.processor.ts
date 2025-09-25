@@ -33,7 +33,7 @@ export class ImageProcessor extends WorkerHost {
             const buffer = await this.minio.getCObject(objKey);
             const { data, info } = await sharp(buffer)
                 .resize({ width: 1200, withoutEnlargement: true })
-                .avif({ quality: 85, chromaSubsampling: '4:4:4' })
+                .avif({ quality: 60, effort: 3 })
                 .toBuffer({ resolveWithObject: true });
 
             const dirName = path.dirname(objKey);
