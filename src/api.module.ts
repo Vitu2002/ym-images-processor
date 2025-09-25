@@ -16,7 +16,7 @@ import { ImageModule } from './image/image.module';
         TypeOrmModule.forRoot({
             type: 'postgres',
             url: process.env.DATABASE_URL,
-            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            autoLoadEntities: true,
             synchronize: true
         }),
         ImageModule
