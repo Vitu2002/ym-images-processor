@@ -8,7 +8,7 @@ import { ImageProducer } from './image.producer';
 @Injectable()
 export class ImageScheduler implements OnModuleInit {
     private readonly logger = new Logger(ImageScheduler.name);
-    private readonly CHUNK_SIZE = parseInt(`${process.env.CHUNK_SIZE}` || '100');
+    private readonly CHUNK_SIZE = parseInt(`${process.env.CHUNK_SIZE}` || '1000') || 1000;
 
     constructor(
         @InjectQueue('image-convert') private readonly queue: Queue,
@@ -20,11 +20,14 @@ export class ImageScheduler implements OnModuleInit {
         // Start run
         this.logger.log('Starting scheduler...');
         await this.handleCron();
+        await this.logStatus();
     }
 
     @Cron(CronExpression.EVERY_HOUR)
     async handleCron() {
-        this.logger.log('Running scheduler...');
+        this.logger.log(
+            `Running scheduler for ${process.env.MINIO_BUCKET} bucket (limit ${this.CHUNK_SIZE || 1000})...`
+        );
         const allowed = await this.checkForPendingJobs();
         if (!allowed) return;
         const images = await this.minio.listImages();
@@ -34,9 +37,26 @@ export class ImageScheduler implements OnModuleInit {
         }
     }
 
+    @Cron(CronExpression.EVERY_5_MINUTES)
+    async logStatus() {
+        const [waiting, active, completed, failed, delayed] = await Promise.all([
+            this.queue.getWaitingCount(),
+            this.queue.getActiveCount(),
+            this.queue.getCompletedCount(),
+            this.queue.getFailedCount(),
+            this.queue.getDelayedCount()
+        ]);
+
+        this.logger.log(
+            `Queue status: waiting=${waiting}, active=${active}, completed=${completed}, failed=${failed}, delayed=${delayed}`
+        );
+    }
+
     async checkForPendingJobs() {
         const waiting = await this.queue.getWaitingCount();
-        const limit = Math.floor(this.CHUNK_SIZE / 2);
+        const limit = Math.floor(this.CHUNK_SIZE * 1.5); // Allow 50% more jobs than chunk size
+
+        this.logger.log(`There are ${waiting} jobs waiting, limit is ${limit}`);
 
         if (waiting > limit) {
             this.logger.warn(`There are ${waiting} jobs waiting, skipping...`);
