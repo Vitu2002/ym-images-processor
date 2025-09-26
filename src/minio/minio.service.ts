@@ -46,6 +46,7 @@ export class MinioService extends Client implements OnModuleInit {
     public async listImages(startAfter?: string): Promise<string[]> {
         const objects: string[] = [];
         const stream = this.listObjectsV2(this.BUCKET_NAME, '', true, startAfter);
+        this.logger.log('Listing images from MinIO...');
         return new Promise((res, rej) => {
             // Stop when chunk is full, or object has no name
             stream.on('data', obj => {
@@ -54,8 +55,14 @@ export class MinioService extends Client implements OnModuleInit {
                 } else stream.destroy();
             });
             // Return objects when reach end or close of stream
-            stream.on('end', () => res(objects));
-            stream.on('close', () => res(objects));
+            stream.on('end', () => {
+                this.logger.log(`Images listed (${objects.length} entities)`);
+                return res(objects);
+            });
+            stream.on('close', () => {
+                this.logger.log(`Images listed (${objects.length} entities)`);
+                return res(objects);
+            });
             // Return error
             stream.on('error', rej);
         });
