@@ -5,7 +5,7 @@ import { Client, S3Error } from 'minio';
 export class MinioService extends Client implements OnModuleInit {
     private readonly logger = new Logger(MinioService.name);
     private readonly BUCKET_NAME = process.env.MINIO_BUCKET || 'images';
-    private readonly CHUNK_SIZE = parseInt(`${process.env.CHUNK_SIZE}` || '100');
+    private readonly CHUNK_SIZE = parseInt(`${process.env.CHUNK_SIZE || 1000}`) || 1000;
 
     constructor() {
         super({

@@ -23,7 +23,7 @@ export class ImageScheduler implements OnModuleInit {
         await this.logStatus();
     }
 
-    @Cron(CronExpression.EVERY_HOUR)
+    @Cron(CronExpression.EVERY_30_MINUTES)
     async handleCron() {
         this.logger.log(
             `Running scheduler for ${process.env.MINIO_BUCKET} bucket (limit ${this.CHUNK_SIZE || 1000})...`

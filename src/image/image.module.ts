@@ -15,7 +15,13 @@ import { ImageService } from './image.service';
         BullModule.registerQueue({
             name: 'image-convert',
             defaultJobOptions: {
-                attempts: 3
+                attempts: 3,
+                removeOnComplete: true,
+                removeOnFail: false,
+                backoff: {
+                    type: 'exponential',
+                    delay: 5000
+                }
             }
         }),
         TypeOrmModule.forFeature([ProcessedImage]),
