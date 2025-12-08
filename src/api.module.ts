@@ -33,6 +33,7 @@ import { ImageModule } from './image/image.module';
         ImageModule,
         BullBoardModule.forRoot({
             route: '/queues',
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             adapter: ExpressAdapter
         })
     ]
