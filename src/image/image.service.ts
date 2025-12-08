@@ -2,8 +2,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
-import { B2Service } from 'src/backblaze/b2.service';
 import { Repository } from 'typeorm';
+import { B2Service } from '../backblaze/b2.service';
 import { ProcessedImage } from '../database/image.entity';
 import { MinioService } from '../minio/minio.service';
 
