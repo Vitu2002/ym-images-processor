@@ -9,6 +9,7 @@ import { ImageProducer } from './image.producer';
 export class ImageScheduler implements OnModuleInit {
     private readonly logger = new Logger(ImageScheduler.name);
     private readonly CHUNK_SIZE = parseInt(`${process.env.CHUNK_SIZE}` || '1000') || 1000;
+    private running = false;
 
     constructor(
         @InjectQueue('image-convert') private readonly queue: Queue,
@@ -23,33 +24,40 @@ export class ImageScheduler implements OnModuleInit {
         await this.logStatus();
     }
 
-    @Cron(CronExpression.EVERY_30_MINUTES)
+    @Cron(CronExpression.EVERY_5_MINUTES)
     async handleCron() {
+        if (this.running || Boolean(process.env.WORKER_ONLY)) return;
         this.logger.log(
             `Running scheduler for ${process.env.MINIO_BUCKET} bucket (limit ${this.CHUNK_SIZE || 1000})...`
         );
         const allowed = await this.checkForPendingJobs();
         if (!allowed) return;
-        const images = await this.minio.listImages();
-        this.logger.log(`Found ${images.length} images`);
-        for (const image of images) {
-            await this.producer.addConversion(image);
+        this.running = true;
+        let added = 0;
+        try {
+            const images = await this.minio.listImages();
+            this.logger.log(`Found ${images.length} images`);
+            for (const image of images) {
+                const alreadyAdded = await this.producer.checkForPendingJob(image);
+                if (alreadyAdded) continue;
+                await this.producer.addConversion(image);
+                added++;
+            }
+        } finally {
+            this.logger.log(`Added ${added} images to queue`);
+            this.running = false;
         }
     }
 
     @Cron(CronExpression.EVERY_5_MINUTES)
     async logStatus() {
-        const [waiting, active, completed, failed, delayed] = await Promise.all([
+        const [waiting, active, failed] = await Promise.all([
             this.queue.getWaitingCount(),
             this.queue.getActiveCount(),
-            this.queue.getCompletedCount(),
-            this.queue.getFailedCount(),
-            this.queue.getDelayedCount()
+            this.queue.getFailedCount()
         ]);
 
-        this.logger.log(
-            `Queue status: waiting=${waiting}, active=${active}, completed=${completed}, failed=${failed}, delayed=${delayed}`
-        );
+        this.logger.log(`Queue status: waiting=${waiting}, active=${active}, failed=${failed}`);
     }
 
     async checkForPendingJobs() {
