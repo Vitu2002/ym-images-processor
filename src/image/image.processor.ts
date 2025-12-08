@@ -12,7 +12,8 @@ import { MinioService } from '../minio/minio.service';
 
 @Processor('image-convert', {
     concurrency: Number(process.env.CONCURRENCY || 5),
-    limiter: { max: 20, duration: 1000 }
+    limiter: { max: 10, duration: 1000 },
+    lockDuration: 60000
 })
 export class ImageProcessor extends WorkerHost {
     private readonly logger = new Logger(ImageProcessor.name);
