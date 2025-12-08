@@ -2,16 +2,21 @@ import { Body, Controller, Delete, Get, Param, UnauthorizedException } from '@ne
 import { DeleteImageDTO } from './image.dto';
 import { ImageService } from './image.service';
 
-@Controller('image')
+@Controller()
 export class ImageController {
     constructor(private readonly manager: ImageService) {}
 
-    @Get()
+    @Get('health')
+    async getHealth() {
+        return await this.manager.status();
+    }
+
+    @Get('image')
     async listAll() {
         return this.manager.listAll();
     }
 
-    @Delete(':uuid')
+    @Delete('image/:uuid')
     async deleteByUUID(@Param('uuid') uuid: string, @Body() { auth }: DeleteImageDTO) {
         if (auth !== process.env.API_SECRET) throw new UnauthorizedException('Unauthorized');
         return this.manager.deleteByUUID(uuid);

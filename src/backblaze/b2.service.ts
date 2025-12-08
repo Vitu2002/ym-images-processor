@@ -6,6 +6,7 @@ export class B2Service extends B2 implements OnModuleInit {
     private readonly logger = new Logger(B2Service.name);
     private readonly BUCKET_ID = process.env.B2_BUCKET || 'images';
     private readonly BUCKET_NAME = process.env.MINIO_BUCKET || 'images';
+    private status = 'loading';
 
     constructor() {
         super({
@@ -26,14 +27,21 @@ export class B2Service extends B2 implements OnModuleInit {
                 this.logger.warn(`Bucket ${this.BUCKET_ID} not found, creating...`);
                 await this.createBucket({ bucketName: this.BUCKET_NAME, bucketType: 'allPublic' });
                 this.logger.warn(`Bucket ${this.BUCKET_ID} created (Public)`);
+                this.status = 'connected';
             } else {
                 this.logger.log(`Bucket ${this.BUCKET_ID} connected`);
+                this.status = 'connected';
             }
         } catch (err: unknown) {
             if (err instanceof Error) this.logger.error(err.message);
+            this.status = 'error';
             // Exit process because can't grant access to bucket
             process.exit(1);
         }
+    }
+
+    getStatus() {
+        return this.status;
     }
 
     // Authenticate with B2 in loop to keep connection alive (23h55 timeout)

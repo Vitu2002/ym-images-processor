@@ -6,6 +6,7 @@ export class MinioService extends Client implements OnModuleInit {
     private readonly logger = new Logger(MinioService.name);
     private readonly BUCKET_NAME = process.env.MINIO_BUCKET || 'images';
     private readonly CHUNK_SIZE = parseInt(`${process.env.CHUNK_SIZE || 1000}`) || 1000;
+    private status = 'loading';
 
     constructor() {
         super({
@@ -23,8 +24,10 @@ export class MinioService extends Client implements OnModuleInit {
                 this.logger.warn(`Bucket ${this.BUCKET_NAME} not found, creating...`);
                 await this.makeBucket(this.BUCKET_NAME);
                 this.logger.warn(`Bucket ${this.BUCKET_NAME} created`);
+                this.status = 'connected';
             } else {
                 this.logger.log(`Bucket ${this.BUCKET_NAME} connected`);
+                this.status = 'connected';
             }
         } catch (err: unknown) {
             if (err instanceof S3Error) {
@@ -33,9 +36,15 @@ export class MinioService extends Client implements OnModuleInit {
                 this.logger.error(err);
             }
 
+            this.status = 'error';
+
             // Exit process because can't grant access to bucket
             process.exit(1);
         }
+    }
+
+    getStatus() {
+        return this.status;
     }
 
     // Generate presigned URL for object, valid for 7 days (default)
