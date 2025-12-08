@@ -5,10 +5,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Job } from 'bullmq';
 import path from 'path';
 import sharp from 'sharp';
-import { B2Service } from 'src/backblaze/b2.service';
-import { ProcessedImage } from 'src/database/image.entity';
-import { MinioService } from 'src/minio/minio.service';
 import { Repository } from 'typeorm';
+import { B2Service } from '../backblaze/b2.service';
+import { ProcessedImage } from '../database/image.entity';
+import { MinioService } from '../minio/minio.service';
 
 @Processor('image-convert', {
     concurrency: Number(process.env.CONCURRENCY || 5),

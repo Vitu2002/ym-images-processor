@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ProcessedImage } from 'src/database/image.entity';
-import { MinioService } from 'src/minio/minio.service';
 import { Repository } from 'typeorm';
+import { ProcessedImage } from '../database/image.entity';
+import { MinioService } from '../minio/minio.service';
 
 @Injectable()
 export class ImageService {

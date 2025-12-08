@@ -2,7 +2,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Queue } from 'bullmq';
-import { MinioService } from 'src/minio/minio.service';
+import { MinioService } from '../minio/minio.service';
 import { ImageProducer } from './image.producer';
 
 @Injectable()

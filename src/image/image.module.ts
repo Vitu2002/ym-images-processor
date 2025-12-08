@@ -1,9 +1,9 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { B2Module } from 'src/backblaze/b2.module';
-import { ProcessedImage } from 'src/database/image.entity';
-import { MinioModule } from 'src/minio/minio.module';
+import { B2Module } from '../backblaze/b2.module';
+import { ProcessedImage } from '../database/image.entity';
+import { MinioModule } from '../minio/minio.module';
 import { ImageController } from './image.controller';
 import { ImageProcessor } from './image.processor';
 import { ImageProducer } from './image.producer';
