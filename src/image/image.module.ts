@@ -1,3 +1,5 @@
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { BullBoardModule } from '@bull-board/nestjs';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,14 +17,18 @@ import { ImageService } from './image.service';
         BullModule.registerQueue({
             name: 'image-convert',
             defaultJobOptions: {
-                attempts: 3,
-                removeOnComplete: true,
-                removeOnFail: false,
+                attempts: 6,
                 backoff: {
                     type: 'exponential',
                     delay: 5000
-                }
+                },
+                removeOnComplete: { age: 86400, count: 1000 },
+                removeOnFail: { age: 86400 * 14 }
             }
+        }),
+        BullBoardModule.forFeature({
+            name: 'image-convert',
+            adapter: BullMQAdapter
         }),
         TypeOrmModule.forFeature([ProcessedImage]),
         MinioModule,

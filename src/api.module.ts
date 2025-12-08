@@ -11,7 +11,6 @@ import { ImageModule } from './image/image.module';
     imports: [
         ConfigModule.forRoot(),
         BullModule.forRoot({
-            prefix: 'ym-img-processor',
             connection: { url: process.env.REDIS_URI },
             defaultJobOptions: {
                 attempts: 6,
@@ -33,7 +32,6 @@ import { ImageModule } from './image/image.module';
         ImageModule,
         BullBoardModule.forRoot({
             route: '/queues',
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             adapter: ExpressAdapter
         })
     ]
