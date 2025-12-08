@@ -10,7 +10,10 @@ import { ProcessedImage } from 'src/database/image.entity';
 import { MinioService } from 'src/minio/minio.service';
 import { Repository } from 'typeorm';
 
-@Processor('image-convert')
+@Processor('image-convert', {
+    concurrency: Number(process.env.CONCURRENCY || 5),
+    limiter: { max: 20, duration: 1000 }
+})
 export class ImageProcessor extends WorkerHost {
     private readonly logger = new Logger(ImageProcessor.name);
 
@@ -31,7 +34,7 @@ export class ImageProcessor extends WorkerHost {
             this.logger.log(`Converting ${objKey}`);
 
             const buffer = await this.minio.getCObject(objKey);
-            const { data, info } = await sharp(buffer)
+            const { data, info } = await sharp(buffer, { limitInputPixels: false })
                 .resize({ width: 1200, withoutEnlargement: true })
                 .avif({ quality: 60, effort: 3 })
                 .toBuffer({ resolveWithObject: true });
