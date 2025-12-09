@@ -35,14 +35,24 @@ export class ImageScheduler implements OnModuleInit {
         this.running = true;
         let added = 0;
         try {
-            const images = await this.minio.listImages();
-            this.logger.log(`Found ${images.length} images`);
-            for (const image of images) {
-                const alreadyAdded = await this.producer.checkForPendingJob(image);
-                if (alreadyAdded) continue;
-                await this.producer.addConversion(image);
-                added++;
+            let reachedLimit = false;
+
+            while (!reachedLimit) {
+                const images = await this.minio.listImages();
+                this.logger.log(`Found ${images.length} images`);
+
+                for (const image of images) {
+                    const alreadyAdded = await this.producer.checkForPendingJob(image);
+                    if (alreadyAdded) continue;
+                    await this.producer.addConversion(image);
+                    added++;
+                }
+
+                if (images.length < this.CHUNK_SIZE || added >= this.CHUNK_SIZE)
+                    reachedLimit = true;
             }
+
+            if (added === 0) this.logger.warn('No images found to process');
         } finally {
             this.logger.log(`Added ${added} images to queue`);
             this.running = false;
