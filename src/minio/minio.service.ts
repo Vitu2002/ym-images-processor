@@ -69,8 +69,10 @@ export class MinioService extends Client implements OnModuleInit {
                 return res(objects);
             });
             stream.on('close', () => {
-                this.logger.log(`Images listed (${objects.length} entities)`);
-                return res(objects);
+                if (!stream.readableEnded) {
+                    this.logger.log(`Images listed (${objects.length} entities)`);
+                    return res(objects);
+                }
             });
             // Return error
             stream.on('error', rej);

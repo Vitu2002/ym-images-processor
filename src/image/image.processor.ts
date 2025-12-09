@@ -17,6 +17,8 @@ import { MinioService } from '../minio/minio.service';
 })
 export class ImageProcessor extends WorkerHost {
     private readonly logger = new Logger(ImageProcessor.name);
+    private readonly MAX_PROCESSING_SECONDS =
+        parseInt(`${process.env.MAX_PROCESSING_SECONDS || 600}`) || 600;
 
     constructor(
         @InjectRepository(ProcessedImage)
@@ -30,6 +32,10 @@ export class ImageProcessor extends WorkerHost {
 
     @Process()
     async process(job: Job<{ objKey: string }>): Promise<any> {
+        return this.hardTimeout(this._processor(job), this.MAX_PROCESSING_SECONDS * 1000);
+    }
+
+    private async _processor(job: Job<{ objKey: string }>) {
         try {
             const { objKey } = job.data;
             this.logger.log(`Processing manhwa page: ${objKey}`);
@@ -44,16 +50,15 @@ export class ImageProcessor extends WorkerHost {
 
             this.logger.log(`Original size: ${origWidth}×${origHeight} (max side: ${maxSide}px)`);
 
-            // 2. Define se vai precisar redimensionar (só se maior que 16300 px)
             const needsResize = maxSide > 16300;
             const targetMaxSide = 16300;
 
             let pipeline = sharp(buffer, {
-                sequentialRead: true, // essencial pra imagens gigantes
+                sequentialRead: true,
                 limitInputPixels: false,
                 failOn: 'truncated'
             })
-                .rotate() // corrige orientação EXIF (quase nunca tem em manhwa, mas não custa)
+                .rotate()
                 .withMetadata();
 
             if (needsResize) {
@@ -63,17 +68,15 @@ export class ImageProcessor extends WorkerHost {
 
                 pipeline = pipeline.resize({
                     [origWidth > origHeight ? 'width' : 'height']: targetMaxSide,
-                    fit: 'contain', // ← mantém proporção, não deforma NADA
-                    withoutEnlargement: true, // nunca aumenta
-                    kernel: 'lanczos3' // qualidade máxima no downscale
+                    fit: 'contain',
+                    withoutEnlargement: true,
+                    kernel: 'lanczos3'
                 });
             }
-            // ← se não precisa redimensionar, passa direto (100% pixel perfect)
 
-            // 3. Sempre tenta AVIF (agora é impossível dar erro de 16384)
             pipeline = pipeline.avif({
                 quality: 75,
-                effort: 6, // ótimo equilíbrio para tiras longas
+                effort: 6,
                 chromaSubsampling: '4:2:0',
                 bitdepth: 8
             });
@@ -116,5 +119,18 @@ export class ImageProcessor extends WorkerHost {
 
             throw err;
         }
+    }
+
+    private async hardTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const id = setTimeout(() => {
+                reject(new Error(`Jot timeouted after ${ms}ms`));
+            }, ms);
+
+            promise
+                .then(resolve)
+                .catch(reject)
+                .finally(() => clearTimeout(id));
+        });
     }
 }
