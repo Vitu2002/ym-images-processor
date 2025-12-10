@@ -26,7 +26,7 @@ export class ImageScheduler implements OnModuleInit {
 
     @Cron(CronExpression.EVERY_5_MINUTES)
     async handleCron() {
-        if (this.running || Boolean(process.env.WORKER_ONLY)) return;
+        if (Boolean(process.env.WORKER_ONLY)) return;
         this.logger.log(
             `Running scheduler for ${process.env.MINIO_BUCKET} bucket (limit ${this.CHUNK_SIZE || 1000})...`
         );
