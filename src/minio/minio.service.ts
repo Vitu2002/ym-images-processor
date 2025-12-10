@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Client, S3Error } from 'minio';
+import { BucketItem, Client, S3Error } from 'minio';
 
 @Injectable()
 export class MinioService extends Client implements OnModuleInit {
@@ -50,6 +50,35 @@ export class MinioService extends Client implements OnModuleInit {
     // Generate presigned URL for object, valid for 7 days (default)
     async generateUrl(objKey: string) {
         return this.presignedGetObject(this.BUCKET_NAME, objKey);
+    }
+
+    public async listPendingImages({ limit, prefix }: { limit: number; prefix?: string }) {
+        const pendingImages: string[] = [];
+
+        try {
+            // Create minio stream to list objects
+            const stream = this.listObjectsV2(this.BUCKET_NAME, prefix, true);
+
+            for await (const obj of stream) {
+                // If object has no name or size is 0, skip it
+                if (!(obj as BucketItem).name || (obj as BucketItem).size === 0) continue;
+
+                pendingImages.push((obj as BucketItem).name as string);
+
+                if (pendingImages.length >= limit) {
+                    this.logger.log(`Limit reached (${limit} entities)`);
+                    break;
+                }
+            }
+        } catch (err) {
+            this.logger.error(
+                'Erro ao listar objetos no MinIO',
+                err instanceof Error ? err.stack : err
+            );
+            throw err;
+        }
+
+        return pendingImages;
     }
 
     public async listImages(startAfter?: string): Promise<string[]> {

@@ -26,56 +26,64 @@ export class ImageScheduler implements OnModuleInit {
 
     @Cron(CronExpression.EVERY_5_MINUTES)
     async handleCron() {
-        if (Boolean(process.env.WORKER_ONLY)) return;
-        this.logger.log(
-            `Running scheduler for ${process.env.MINIO_BUCKET} bucket (limit ${this.CHUNK_SIZE || 1000})...`
-        );
-        const allowed = await this.checkForPendingJobs();
-        if (!allowed) return;
+        // Only run on main process
+        if (process.env.WORKER_ONLY == true || process.env.WORKER_ONLY == 'true') return;
+        // Check if already running
+        if (this.running) return this.logger.warn('Already running a image scheduler');
+        else
+            this.logger.log(
+                `Running scheduler for ${process.env.MINIO_BUCKET} bucket (limit ${this.CHUNK_SIZE || 1000})...`
+            );
+
         this.running = true;
-        let added = 0;
         try {
-            let reachedLimit = false;
+            // Check if there are pending jobs in queue to avoid overloading (1.5x chunk size)
+            if (!(await this.checkForPendingJobs())) return;
+            // Get images path from minio
+            const images = await this.minio.listPendingImages({ limit: this.CHUNK_SIZE });
 
-            while (!reachedLimit) {
-                const images = await this.minio.listImages();
-                this.logger.log(`Found ${images.length} images`);
+            // Return if no images found
+            if (images.length === 0) {
+                this.logger.warn('No images found to process');
+                return;
+            }
+            this.logger.log(`Found ${images.length} images`);
 
-                for (const image of images) {
-                    const alreadyAdded = await this.producer.checkForPendingJob(image);
-                    if (alreadyAdded) continue;
-                    await this.producer.addConversion(image);
-                    added++;
-                }
-
-                if (images.length < this.CHUNK_SIZE || added >= this.CHUNK_SIZE)
-                    reachedLimit = true;
+            // Add images to queue for processing (auto deduplication enabled)
+            for (const image of images) {
+                await this.producer.addConversion(image);
             }
 
-            if (added === 0) this.logger.warn('No images found to process');
+            // End scheduler
+            this.logger.log(`Added ${images.length} images to queue (deduplication enabled)`);
+        } catch (err) {
+            this.logger.error('Error running scheduler', err instanceof Error ? err.stack : err);
         } finally {
-            this.logger.log(`Added ${added} images to queue`);
             this.running = false;
         }
     }
 
     @Cron(CronExpression.EVERY_5_MINUTES)
     async logStatus() {
+        // Get queue status
         const [waiting, active, failed] = await Promise.all([
             this.queue.getWaitingCount(),
             this.queue.getActiveCount(),
             this.queue.getFailedCount()
         ]);
 
+        // Log status
         this.logger.log(`Queue status: waiting=${waiting}, active=${active}, failed=${failed}`);
     }
 
     async checkForPendingJobs() {
+        // Get queue pending count
         const waiting = await this.queue.getWaitingCount();
         const limit = Math.floor(this.CHUNK_SIZE * 1.5); // Allow 50% more jobs than chunk size
 
         this.logger.log(`There are ${waiting} jobs waiting, limit is ${limit}`);
 
+        // Check if waiting is greater than limit
         if (waiting > limit) {
             this.logger.warn(`There are ${waiting} jobs waiting, skipping...`);
             return false;

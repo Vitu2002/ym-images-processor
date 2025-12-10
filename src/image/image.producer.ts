@@ -7,7 +7,19 @@ export class ImageProducer {
     constructor(@InjectQueue('image-convert') private readonly queue: Queue) {}
 
     async addConversion(objKey: string) {
-        await this.queue.add('process-image', { objKey }, { jobId: objKey });
+        // Add job to queue
+        await this.queue.add(
+            'process-image', // Queue name
+            { objKey }, // Job data
+            {
+                jobId: objKey, // Job ID
+                // Deduplication
+                deduplication: {
+                    id: objKey,
+                    replace: true
+                }
+            }
+        );
     }
 
     async checkForPendingJob(objKey: string) {
