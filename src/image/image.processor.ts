@@ -105,19 +105,19 @@ export class ImageProcessor extends WorkerHost {
 
             return meta;
         } catch (err: unknown) {
-            if (err instanceof Error) {
-                const errMsg = err.message || 'Unknown error';
-                this.logger.error(`Job ${job.id} failed: ${errMsg}`, err.stack);
+            const errMessage = err instanceof Error ? err.message : 'Unknown error';
+            const errStack = err instanceof Error ? err.stack : 'Unknown stack';
 
-                await this.db.save(
-                    this.db.create({
-                        objKey: job.data.objKey,
-                        status: 'error'
-                    })
-                );
-            }
+            this.logger.error(`Job ${job.id} failed: ${errMessage}`, errStack);
 
-            throw err;
+            await this.db.save(
+                this.db.create({
+                    objKey: job.data.objKey,
+                    status: 'error'
+                })
+            );
+
+            throw new Error(JSON.stringify({ message: errMessage, stack: errStack }));
         }
     }
 
