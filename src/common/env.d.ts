@@ -13,5 +13,6 @@ declare namespace NodeJS {
         CHUNK_SIZE: number; // max number of objects to fetch at once
         API_SECRET: string; // api secret to auth delete request
         CONCURRENCY: number; // number of concurrent image processing jobs
+        WORKER_ONLY: boolean | string; // if true, only worker will run
     }
 }
