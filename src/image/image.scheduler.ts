@@ -10,6 +10,8 @@ export class ImageScheduler implements OnModuleInit {
     private readonly logger = new Logger(ImageScheduler.name);
     private readonly CHUNK_SIZE = parseInt(`${process.env.CHUNK_SIZE}` || '1000') || 1000;
     private running = false;
+    private stolenRunningAfterMs = 1000 * 60 * 10; // 10 minutes;
+    private lastRunning: number;
 
     constructor(
         @InjectQueue('image-convert') private readonly queue: Queue,
@@ -24,6 +26,18 @@ export class ImageScheduler implements OnModuleInit {
         await this.logStatus();
     }
 
+    @Cron(CronExpression.EVERY_10_MINUTES)
+    checkForStolenCondition() {
+        // If it's first time running, ignore it
+        if (!this.lastRunning) return;
+        // If lastRunning is greater than 10 minutes and running still true, reset it
+        const stolenTime = this.lastRunning + this.stolenRunningAfterMs;
+        if (Date.now() >= stolenTime && this.running) {
+            this.logger.warn('Stolen running identified, reseting running state!');
+            this.running = false;
+        }
+    }
+
     @Cron(CronExpression.EVERY_5_MINUTES)
     async handleCron() {
         // Only run on main process
@@ -34,7 +48,7 @@ export class ImageScheduler implements OnModuleInit {
             this.logger.log(
                 `Running scheduler for ${process.env.MINIO_BUCKET} bucket (limit ${this.CHUNK_SIZE || 1000})...`
             );
-
+        this.lastRunning = Date.now();
         this.running = true;
         try {
             // Check if there are pending jobs in queue to avoid overloading (1.5x chunk size)
