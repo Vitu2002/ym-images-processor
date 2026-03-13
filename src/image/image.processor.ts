@@ -19,6 +19,12 @@ export class ImageProcessor extends WorkerHost {
     private readonly logger = new Logger(ImageProcessor.name);
     private readonly MAX_PROCESSING_SECONDS =
         parseInt(`${process.env.MAX_PROCESSING_SECONDS || 600}`) || 600;
+    private nextUploadUrlRefetch = 0;
+    private uploadUrl: {
+        bucketId: string;
+        uploadUrl: string;
+        uploadAuthToken: string;
+    } | null = null;
 
     constructor(
         @InjectRepository(ProcessedImage)
@@ -27,6 +33,10 @@ export class ImageProcessor extends WorkerHost {
         private readonly b2: B2Service
     ) {
         super();
+        sharp.concurrency(1);
+        sharp.cache({ memory: 50 });
+        sharp.simd(true);
+
         this.logger.log(`Image processor started with concurrency ${process.env.CONCURRENCY || 1}`);
     }
 
@@ -40,10 +50,12 @@ export class ImageProcessor extends WorkerHost {
             const { objKey } = job.data;
             this.logger.log(`Processing manhwa page: ${objKey}`);
 
-            const buffer = await this.minio.getCObject(objKey);
+            let pipeline = sharp(await this.minio.getCObject(objKey), {
+                sequentialRead: true,
+                failOn: 'truncated'
+            }).rotate();
 
-            // 1. Pega metadados sem carregar a imagem inteira
-            const metadata = await sharp(buffer).metadata();
+            const metadata = await pipeline.metadata();
             const origWidth = metadata.width ?? 0;
             const origHeight = metadata.height ?? 0;
             const maxSide = Math.max(origWidth, origHeight);
@@ -53,14 +65,6 @@ export class ImageProcessor extends WorkerHost {
             const needsResize = maxSide > 16300;
             const targetMaxSide = 16300;
 
-            let pipeline = sharp(buffer, {
-                sequentialRead: true,
-                limitInputPixels: false,
-                failOn: 'truncated'
-            })
-                .rotate()
-                .withMetadata();
-
             if (needsResize) {
                 this.logger.warn(
                     `Imagem muito alta/larga (${maxSide}px) → resize mantendo aspect ratio para ${targetMaxSide}px no lado maior`
@@ -68,7 +72,7 @@ export class ImageProcessor extends WorkerHost {
 
                 pipeline = pipeline.resize({
                     [origWidth > origHeight ? 'width' : 'height']: targetMaxSide,
-                    fit: 'contain',
+                    fit: 'inside',
                     withoutEnlargement: true,
                     kernel: 'lanczos3'
                 });
@@ -85,11 +89,16 @@ export class ImageProcessor extends WorkerHost {
 
             const dirName = path.dirname(objKey);
             const baseName = path.basename(objKey, path.extname(objKey));
-            const fileName = path.join(dirName, `${baseName}.avif`);
+            const fileName = `${dirName}/${baseName}.avif`;
 
             this.logger.log(`Upload ${fileName} (${info.width}×${info.height}, ${info.format})`);
 
-            const res = await this.b2.upload(data, fileName, await this.b2.generateUploadUrl());
+            if (!this.uploadUrl || Date.now() > this.nextUploadUrlRefetch) {
+                this.uploadUrl = await this.b2.generateUploadUrl();
+                this.nextUploadUrlRefetch = Date.now() + 23 * 60 * 60 * 1000; // 23h
+            }
+
+            const res = await this.b2.upload(data, fileName, this.uploadUrl);
 
             const meta = this.db.create({
                 b2Id: res.fileId,
@@ -117,7 +126,7 @@ export class ImageProcessor extends WorkerHost {
                 })
             );
 
-            throw new Error(JSON.stringify({ message: errMessage, stack: errStack }));
+            throw err instanceof Error ? err : new Error(String(err));
         }
     }
 
