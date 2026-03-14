@@ -83,7 +83,7 @@ export class MinioService extends Client implements OnModuleInit {
 
     public async listImages(startAfter?: string): Promise<string[]> {
         const objects: string[] = [];
-        const stream = this.listObjectsV2(this.BUCKET_NAME, '', true, startAfter);
+        const stream = this.listObjectsV2(this.BUCKET_NAME, 'chapters/', true, startAfter);
         this.logger.log('Listing images from MinIO...');
         return new Promise((res, rej) => {
             // Stop when chunk is full, or object has no name
